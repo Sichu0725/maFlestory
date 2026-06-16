@@ -1,0 +1,337 @@
+@import "tailwindcss";
+
+:root {
+  color: #17191d;
+  background: #eef1f4;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #eef1f4;
+}
+
+button {
+  font: inherit;
+}
+
+.app-stage {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #eef1f4;
+}
+
+.app-stage[data-panning="true"] {
+  cursor: grabbing;
+}
+
+.virtual-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(23 25 29 / 5%) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(23 25 29 / 5%) 1px, transparent 1px), #eef1f4;
+  background-size: 48px 48px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.dock-manager {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 32px));
+  overflow: hidden;
+  border: 1px solid #c7ccd4;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgb(16 24 40 / 18%);
+}
+
+.dock-manager[data-minimized="true"] {
+  width: min(280px, calc(100vw - 32px));
+  grid-template-rows: auto;
+}
+
+.dock-manager__titlebar {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  padding: 7px 10px 7px 8px;
+  border-bottom: 1px solid #e2e5ea;
+  background: #f8fafb;
+  user-select: none;
+}
+
+.dock-manager[data-minimized="true"] .dock-manager__titlebar {
+  grid-template-columns: 28px minmax(0, 1fr);
+  border-bottom: 0;
+}
+
+.dock-manager__drag-handle {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #b9c0ca;
+  border-radius: 6px;
+  background:
+    radial-gradient(circle, #68717d 1.2px, transparent 1.4px) 4px 4px / 7px 7px,
+    #ffffff;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dock-manager__drag-handle:active {
+  cursor: grabbing;
+}
+
+.dock-manager__titlebar h1 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-manager__minimize {
+  min-width: 36px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #c7ccd4;
+  border-radius: 6px;
+  color: #17191d;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dock-manager__minimize:hover,
+.text-button:hover,
+.toolbar-button:hover:not(:disabled) {
+  border-color: #8993a1;
+  background: #f2f5f7;
+}
+
+.dock-manager__body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.window-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.section-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e7e9ee;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.docked-status {
+  display: grid;
+  gap: 8px;
+  margin: 10px 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #b8c7d9;
+  border-radius: 6px;
+  background: #eef5fb;
+}
+
+.docked-status__label {
+  color: #35627d;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.docked-status__list {
+  display: grid;
+  gap: 6px;
+}
+
+.docked-status__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.docked-status__content {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.docked-status__title {
+  min-width: 0;
+  overflow: hidden;
+  color: #17212b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docked-status__meta {
+  min-width: 0;
+  overflow: hidden;
+  color: #5d6c7a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docked-status__undock {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #aebccc;
+  border-radius: 6px;
+  color: #17212b;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.docked-status__undock:hover:not(:disabled) {
+  border-color: #718296;
+  background: #f7fafc;
+}
+
+.docked-status__undock:disabled {
+  color: #7c8490;
+  background: #eef0f3;
+  cursor: not-allowed;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-top: 1px solid #d9dde3;
+  background: #ffffff;
+}
+
+.toolbar-button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid #c4cad3;
+  border-radius: 6px;
+  color: #17191d;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.toolbar-button:disabled,
+.text-button:disabled {
+  color: #7c8490;
+  background: #eef0f3;
+  cursor: not-allowed;
+}
+
+.text-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #c4cad3;
+  border-radius: 6px;
+  color: #17191d;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toolbar-status {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #596271;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.window-list__empty {
+  margin: 0;
+  padding: 12px 8px;
+  color: #6c7480;
+  font-size: 14px;
+}
+
+.window-list__item {
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  color: #17191d;
+  background: transparent;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-list__item:hover,
+.window-list__item[aria-selected="true"] {
+  background: #e4ebf4;
+}
+
+@media (max-width: 720px) {
+  .dock-manager {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+}
