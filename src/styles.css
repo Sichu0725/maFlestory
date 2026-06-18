@@ -26,6 +26,17 @@ body,
   background: #eef1f4;
 }
 
+html[data-layer="overlay"],
+body[data-layer="overlay"],
+html[data-layer="overlay"] #root {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
 button {
   font: inherit;
 }
@@ -35,6 +46,10 @@ button {
   width: 100vw;
   min-height: 100vh;
   overflow: hidden;
+  background: transparent;
+}
+
+.app-stage--bottom {
   background: #eef1f4;
 }
 
@@ -56,6 +71,28 @@ button {
   will-change: transform;
 }
 
+.virtual-canvas--static {
+  width: 100vw;
+  height: 100vh;
+}
+
+.bottom-status {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  max-width: min(520px, calc(100vw - 32px));
+  margin: 0;
+  padding: 8px 10px;
+  overflow: hidden;
+  border: 1px solid #d4a2a2;
+  border-radius: 6px;
+  color: #842929;
+  background: #fff6f6;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dock-manager {
   position: fixed;
   top: 0;
@@ -75,6 +112,89 @@ button {
 .dock-manager[data-minimized="true"] {
   width: min(280px, calc(100vw - 32px));
   grid-template-rows: auto;
+}
+
+html[data-layer="overlay"] .dock-manager {
+  width: 100vw;
+  height: 100vh;
+  max-height: none;
+}
+
+html[data-layer="overlay"] .dock-manager[data-minimized="true"] {
+  width: 100vw;
+}
+
+.overlay-resize {
+  position: absolute;
+  z-index: 30;
+  background: transparent;
+  touch-action: none;
+}
+
+.overlay-resize--n {
+  top: 0;
+  right: 12px;
+  left: 12px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.overlay-resize--s {
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.overlay-resize--e {
+  top: 12px;
+  right: 0;
+  bottom: 12px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.overlay-resize--w {
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.overlay-resize--ne,
+.overlay-resize--sw {
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}
+
+.overlay-resize--nw,
+.overlay-resize--se {
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.overlay-resize--ne {
+  top: 0;
+  right: 0;
+}
+
+.overlay-resize--nw {
+  top: 0;
+  left: 0;
+}
+
+.overlay-resize--se {
+  right: 0;
+  bottom: 0;
+}
+
+.overlay-resize--sw {
+  bottom: 0;
+  left: 0;
 }
 
 .dock-manager__titlebar {

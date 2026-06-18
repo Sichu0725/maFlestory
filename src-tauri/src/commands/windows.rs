@@ -3,9 +3,10 @@ use tauri::{State, Window};
 use crate::models::{DockPanelBounds, DockStateSnapshot, DockedWindowInfo, WindowInfo, WindowRect};
 use crate::state::DockStateStore;
 use crate::win32::{
-    self, apply_child_style, apply_no_activate, get_parent, get_window_ex_style, get_window_rect,
-    get_window_scale_factor, get_window_style, restore_parent, restore_window_rect,
-    restore_window_style, set_window_position, Hwnd,
+    self, apply_child_style, apply_no_activate, bottom_webview_hwnd, bring_window_to_top,
+    get_parent, get_window_ex_style, get_window_rect, get_window_scale_factor, get_window_style,
+    overlay_hwnd, restore_parent, restore_window_rect, restore_window_style, send_window_to_bottom,
+    set_window_position, Hwnd,
 };
 
 #[tauri::command]
@@ -41,11 +42,12 @@ pub fn dock_window(
     hwnd: isize,
     camera_bounds: DockPanelBounds,
 ) -> Result<(), String> {
-    // Reparents the target HWND into the no-activate Tauri container at its current size.
-    let container = tauri_hwnd(&window)?;
+    // Reparents the target HWND into the bottom webview native layer at its current size.
+    let tauri_container = tauri_hwnd(&window)?;
+    let dock_parent = dock_parent_hwnd(&window)?;
     let target = Hwnd::new(hwnd)?;
 
-    if target.0 == container.0 {
+    if target.0 == tauri_container.0 || target.0 == dock_parent.0 {
         return Err("Cannot dock the Tauri container window into itself.".to_string());
     }
 
@@ -65,21 +67,19 @@ pub fn dock_window(
     let snapshot = capture_snapshot(target, original_rect, virtual_bounds)?;
     let target_bounds = viewport_child_bounds(virtual_bounds, camera_bounds);
 
-    apply_no_activate(container)?;
+    apply_no_activate(tauri_container)?;
+    apply_no_activate(dock_parent)?;
 
     if let Err(error) = apply_child_style(target).and_then(|_| apply_no_activate(target)) {
         let _ = restore_window_style(target, snapshot.original_style, snapshot.original_ex_style);
         return Err(error);
     }
 
-    if let Err(error) = win32::set_parent(target, container) {
+    if let Err(error) = win32::set_parent(target, dock_parent) {
         let _ = restore_window_style(target, snapshot.original_style, snapshot.original_ex_style);
         return Err(error);
     }
 
-    if let Err(error) = win32::install_mouse_no_activate_handler(target) {
-        eprintln!("failed to install no-activate handler on docked window: {error}");
-    }
     if let Err(error) = win32::register_focus_guard_window(target) {
         eprintln!("failed to register focus guard on docked window: {error}");
     }
@@ -91,6 +91,8 @@ pub fn dock_window(
         let _ = restore_window_style(target, snapshot.original_style, snapshot.original_ex_style);
         return Err(error);
     }
+
+    stack_docked_window_between_webviews(target)?;
 
     let mut entries = lock_entries(&state)?;
     entries.insert(target.0, snapshot);
@@ -150,7 +152,8 @@ pub fn resize_docked_window(
     // Resizes a docked child window without activating it or changing Z-order.
     let target = Hwnd::new(hwnd)?;
     ensure_valid_hwnd(target)?;
-    set_window_position(target, physical_bounds(&window, bounds)?)
+    set_window_position(target, physical_bounds(&window, bounds)?)?;
+    stack_docked_window_between_webviews(target)
 }
 
 #[tauri::command]
@@ -173,6 +176,7 @@ pub fn position_docked_window(
     }
 
     set_window_position(target, physical_bounds(&window, viewport_bounds)?)?;
+    stack_docked_window_between_webviews(target)?;
 
     let mut entries = lock_entries(&state)?;
     if let Some(snapshot) = entries.get_mut(&target.0) {
@@ -189,7 +193,7 @@ pub fn sync_docked_window_bounds(
     camera_bounds: DockPanelBounds,
 ) -> Result<Vec<DockedWindowInfo>, String> {
     // Saves current child HWND rectangles as virtual bounds before camera movement.
-    let container = tauri_hwnd(&window)?;
+    let dock_parent = dock_parent_hwnd(&window)?;
     let mut entries = lock_entries(&state)?;
     let mut synced_windows = Vec::new();
 
@@ -199,8 +203,10 @@ pub fn sync_docked_window_bounds(
             continue;
         }
 
-        let viewport_bounds =
-            css_bounds(&window, win32::get_child_window_bounds(container, target)?)?;
+        let viewport_bounds = css_bounds(
+            &window,
+            win32::get_child_window_bounds(dock_parent, target)?,
+        )?;
         snapshot.virtual_bounds = DockPanelBounds {
             x: camera_bounds.x + viewport_bounds.x,
             y: camera_bounds.y + viewport_bounds.y,
@@ -220,6 +226,11 @@ fn tauri_hwnd(window: &Window) -> Result<Hwnd, String> {
         .map_err(|error| format!("Failed to get Tauri HWND: {error}"))?;
 
     Hwnd::new(hwnd.0 as isize)
+}
+
+fn dock_parent_hwnd(window: &Window) -> Result<Hwnd, String> {
+    // Selects the native parent used for docked HWNDs, preferring the bottom webview layer.
+    bottom_webview_hwnd().map_or_else(|| tauri_hwnd(window), Ok)
 }
 
 fn capture_snapshot(
@@ -369,4 +380,27 @@ fn lock_entries<'a>(
         .entries
         .lock()
         .map_err(|_| "Dock state store lock is poisoned.".to_string())
+}
+
+fn raise_overlay_webview() {
+    // Keeps the transparent overlay webview above newly docked child HWNDs.
+    if let Some(overlay) = overlay_hwnd() {
+        if let Err(error) = bring_window_to_top(overlay) {
+            eprintln!("failed to raise overlay webview: {error}");
+        }
+    }
+}
+
+fn stack_docked_window_between_webviews(target: Hwnd) -> Result<(), String> {
+    // Orders native child layers as bottom webview, docked HWND, then overlay webview.
+    if let Some(bottom) = bottom_webview_hwnd() {
+        if let Err(error) = send_window_to_bottom(bottom) {
+            eprintln!("failed to send bottom webview behind docked windows: {error}");
+        }
+    }
+
+    bring_window_to_top(target)?;
+    raise_overlay_webview();
+
+    Ok(())
 }

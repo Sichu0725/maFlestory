@@ -10,8 +10,8 @@ use windows_sys::Win32::Graphics::Gdi::{
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetWindowRect, SetWindowPos, HWND_BOTTOM, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SWP_NOZORDER,
+    GetWindowRect, SetWindowPos, HWND_BOTTOM, HWND_TOP, SWP_FRAMECHANGED, SWP_NOACTIVATE,
+    SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
 };
 
 const DEFAULT_DPI: f64 = 96.0;
@@ -103,6 +103,17 @@ pub fn send_window_to_bottom(hwnd: Hwnd) -> Result<(), String> {
 
     if result == 0 {
         return Err(last_os_error("SetWindowPos(HWND_BOTTOM) failed"));
+    }
+
+    Ok(())
+}
+
+pub fn bring_window_to_top(hwnd: Hwnd) -> Result<(), String> {
+    // Raises a child or top-level HWND without activating it or changing its size.
+    let result = unsafe { SetWindowPos(hwnd.as_raw(), HWND_TOP, 0, 0, 0, 0, BOTTOM_FLAGS) };
+
+    if result == 0 {
+        return Err(last_os_error("SetWindowPos(HWND_TOP) failed"));
     }
 
     Ok(())

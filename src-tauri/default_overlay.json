@@ -1,0 +1,27 @@
+{
+  "overlays": {
+    "dock-manager": {
+      "id": "dock-manager",
+      "route": "overlay/dock-manager",
+      "visible": true,
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 380,
+        "height": 620
+      },
+      "minSize": {
+        "width": 280,
+        "height": 420
+      },
+      "maxSize": {
+        "width": 520,
+        "height": 720
+      },
+      "minimizeSize": {
+        "width": 200,
+        "height": 42
+      }
+    }
+  }
+}
